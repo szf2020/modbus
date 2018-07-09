@@ -79,8 +79,8 @@ static int _modbus_set_slave(modbus_t *ctx, int slave)
     if (slave >= 0 && slave <= 247) {
         ctx->slave = slave;
     } else {
-        APP_LOG_ERROR("slave id invalid!.\n");
-        return -1;
+      APP_LOG_ERROR("slave id invalid!.\n");
+      return -1;
     }
     return 0;
 }
@@ -146,7 +146,27 @@ static int _modbus_rtu_send_msg_pre(uint8_t *req, int req_length)
 
 static ssize_t _modbus_rtu_send(modbus_t *ctx, const uint8_t *req, int req_length)
 {
- return serial_write(ctx->s, req, req_length,0);
+
+
+ssize_t len;
+
+/*对于半双工的工作模式 必须等待发送完毕才可以接收*/
+#if  RS485_HALF_DUPLEX >0
+
+#define  MODBUS_RTU_SEND_TIMEOUT    20
+
+void modbus_rtu_send_pre();
+void modbus_rtu_send_after();
+
+modbus_rtu_send_pre();
+len = serial_write(ctx->s, req, req_length);
+len -= serial_wait_complete(ctx->s,MODBUS_RTU_SEND_TIMEOUT);
+modbus_rtu_send_after();
+#else
+len = serial_write(ctx->s, req, req_length);
+#endif
+
+return len;
 }
 
 static int _modbus_rtu_receive(modbus_t *ctx, uint8_t *req)
@@ -172,8 +192,7 @@ static int _modbus_rtu_receive(modbus_t *ctx, uint8_t *req)
 
 static ssize_t _modbus_rtu_recv(modbus_t *ctx, uint8_t *rsp, int rsp_length)
 {
-  return serial_read(ctx->s, rsp, rsp_length,0);
-
+  return serial_read(ctx->s, rsp, rsp_length);
 }
 
 static int _modbus_rtu_flush(modbus_t *);
@@ -377,15 +396,21 @@ modbus_t* modbus_new_rtu(uint8_t port,
     ctx_rtu->serial_mode = MODBUS_RTU_RS232;
     ctx_rtu->confirmation_to_ignore = FALSE;
     rc= serial_device_create(&ctx->s);
+    /*创建设备实体失败*/
     if(rc ==-1){
     modbus_free(ctx);
     APP_LOG_ERROR("创建设备失败！\r\n");
     return NULL;
     }
+    /*注册设备驱动失败*/
     rc = serial_register_hal_driver(ctx->s,hal);
     if(rc ==-1) {
     APP_LOG_ERROR("注册设备驱动失败！\r\n");
+    serial_device_destroy(ctx->s);
+    APP_LOG_ERROR("销毁serial device.\r\n");
     modbus_free(ctx);
+    APP_LOG_ERROR("ctx and ctx->backend_data struct.\r\n");
+    return NULL;
     }
     return ctx;
 }

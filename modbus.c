@@ -367,7 +367,7 @@ static int check_confirmation(modbus_t *ctx, uint8_t *req,
     if (ctx->backend->pre_check_confirmation) {
         rc = ctx->backend->pre_check_confirmation(ctx, req, rsp, rsp_length);
         if (rc == -1) {
-            return -1;
+           return -1;
         }
     }
 
@@ -1328,7 +1328,7 @@ void _modbus_init_common(modbus_t *ctx)
     ctx->backend_data = NULL;
     ctx->response_timeout = _RESPONSE_TIMEOUT;
     ctx->byte_timeout = _BYTE_TIMEOUT;
-    ctx->indication_timeout = 0xFFFFFFFF;
+    ctx->indication_timeout = _INDICATION_TIMEOUT;
 }
 
 /* Define the slave number */
@@ -1352,39 +1352,6 @@ int modbus_get_slave(modbus_t *ctx)
     return ctx->slave;
 }
 
-int modbus_set_error_recovery(modbus_t *ctx,
-                              modbus_error_recovery_mode error_recovery)
-{
-    if (ctx == NULL) {
-        APP_LOG_ERROR("ctx is null..\r\n");
-        return -1;
-    }
-
-    /* The type of modbus_error_recovery_mode is unsigned enum */
-    ctx->error_recovery = (uint8_t) error_recovery;
-    return 0;
-}
-
-int modbus_set_socket(modbus_t *ctx, int s)
-{
-    if (ctx == NULL) {
-        APP_LOG_ERROR("ctx is null..\r\n");
-        return -1;
-    }
-
-    ctx->s = s;
-    return 0;
-}
-
-int modbus_get_socket(modbus_t *ctx)
-{
-    if (ctx == NULL) {
-        APP_LOG_ERROR("ctx is null..\r\n");
-        return -1;
-    }
-
-    return ctx->s;
-}
 
 /* Get the timeout interval used to wait for a response */
 int modbus_get_response_timeout(modbus_t *ctx, uint32_t *timeout)

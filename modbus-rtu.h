@@ -20,23 +20,17 @@ MODBUS_BEGIN_DECLS
 MODBUS_API modbus_t* modbus_new_rtu(uint8_t port, uint32_t baud, 
                                     uint8_t data_bit, uint8_t stop_bit,serial_hal_driver_t *hal);
 
-#define MODBUS_RTU_RS232 0
-#define MODBUS_RTU_RS485 1
+#define MODBUS_RTU_RS232            0
+#define MODBUS_RTU_RS485            1
+
+#define MODBUS_RTU_RS485_HALF_DUPLEX      0
+#define MODBUS_RTU_SEND_TIMEOUT           5
+
 
 MODBUS_API int modbus_rtu_set_serial_mode(modbus_t *ctx, int mode);
 MODBUS_API int modbus_rtu_get_serial_mode(modbus_t *ctx);
 
-#define MODBUS_RTU_RTS_NONE   0
-#define MODBUS_RTU_RTS_UP     1
-#define MODBUS_RTU_RTS_DOWN   2
 
-MODBUS_API int modbus_rtu_set_rts(modbus_t *ctx, int mode);
-MODBUS_API int modbus_rtu_get_rts(modbus_t *ctx);
-
-MODBUS_API int modbus_rtu_set_custom_rts(modbus_t *ctx, void (*set_rts) (modbus_t *ctx, int on));
-
-MODBUS_API int modbus_rtu_set_rts_delay(modbus_t *ctx, int us);
-MODBUS_API int modbus_rtu_get_rts_delay(modbus_t *ctx);
 
 MODBUS_END_DECLS
 

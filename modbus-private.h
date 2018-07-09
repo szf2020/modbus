@@ -35,8 +35,9 @@ MODBUS_BEGIN_DECLS
 #define _MODBUS_EXCEPTION_RSP_LENGTH 5
 
 /* Timeouts in microsecond (0.5 s) */
-#define _RESPONSE_TIMEOUT    500
-#define _BYTE_TIMEOUT        500
+#define _RESPONSE_TIMEOUT    100
+#define _BYTE_TIMEOUT        3
+#define _INDICATION_TIMEOUT  0xFFFFFFFF
 
 typedef enum {
     _MODBUS_BACKEND_TYPE_RTU=0,
@@ -95,8 +96,6 @@ struct _modbus {
     int slave;
     /* Socket or file descriptor */
     int s;
-    int debug;
-    int error_recovery;
     int response_timeout;
     int byte_timeout;
     int indication_timeout;
