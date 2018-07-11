@@ -9,9 +9,9 @@
 #include "string.h"
 #include "modbus.h"
 
-#define APP_LOG_MODULE_NAME   "[modbus]"
-#define APP_LOG_MODULE_LEVEL   APP_LOG_LEVEL_DEBUG    
-#include "app_log.h"
+#include "log.h"
+#define LOG_MODULE_NAME   "[modbus]"
+#define LOG_MODULE_LEVEL   LOG_LEVEL_DEBUG  
    
 /* Internal use */
 #define MSG_LENGTH_UNDEFINED -1
@@ -31,19 +31,20 @@ typedef enum {
     _STEP_DATA
 } _step_t;
 
+
 int modbus_flush(modbus_t *ctx)
 {
     int rc;
 
     if (ctx == NULL) {
-    APP_LOG_ERROR("ctx is null.\r\n");
+    log_error("ctx is null.\r\n");
     return -1;
     }
 
     rc = ctx->backend->flush(ctx);
     if (rc != -1) {
         /* Not all backends are able to return the number of bytes flushed */
-        APP_LOG_DEBUG("Bytes flushed (%d).\r\n", rc);
+        log_debug("Bytes flushed (%d).\r\n", rc);
     }
     return rc;
 }
@@ -94,11 +95,11 @@ static int send_msg(modbus_t *ctx, uint8_t *msg, int msg_length)
     msg_length = ctx->backend->send_msg_pre(msg, msg_length);
  
     for (i = 0; i < msg_length; i++)
-    APP_LOG_DEBUG("[%2X]\r\n", msg[i]);
+    log_debug("[%2X]\r\n", msg[i]);
 
     rc = ctx->backend->send(ctx, msg, msg_length);
     if (rc == -1) {
-        APP_LOG_ERROR("send error.\r\n");
+        log_error("send error.\r\n");
     }
     if (rc > 0 && rc != msg_length) {
         return -1;
@@ -114,7 +115,7 @@ int modbus_send_raw_request(modbus_t *ctx, uint8_t *raw_req, int raw_req_length)
     int req_length;
 
     if (ctx == NULL) {
-        APP_LOG_ERROR("ctx is null.\r\n");
+        log_error("ctx is null.\r\n");
         return -1;
     }
 
@@ -122,7 +123,7 @@ int modbus_send_raw_request(modbus_t *ctx, uint8_t *raw_req, int raw_req_length)
         /* The raw request must contain function and slave at least and
            must not be longer than the maximum pdu length plus the slave
            address. */
-        APP_LOG_ERROR("raw req is invalid.\r\n");
+        log_error("raw req is invalid.\r\n");
         return -1;
     }
 
@@ -247,9 +248,9 @@ int _modbus_receive_msg(modbus_t *ctx, uint8_t *msg, msg_type_t msg_type)
     _step_t step;
 
     if (msg_type == MSG_INDICATION) {
-     APP_LOG_DEBUG("Waiting for an indication...\r\n");
+     log_debug("Waiting for an indication...\r\n");
      } else {
-     APP_LOG_DEBUG("Waiting for a confirmation...\r\n");
+     log_debug("Waiting for a confirmation...\r\n");
     }
     
 
@@ -268,22 +269,22 @@ int _modbus_receive_msg(modbus_t *ctx, uint8_t *msg, msg_type_t msg_type)
     while (length_to_read != 0) {
         rc = ctx->backend->select(ctx,timeout);
         if (rc == -1) {
-            APP_LOG_ERROR("select error.\r\n");
+            log_error("select error.\r\n");
             return -1;
         }
         if (rc == 0) {
-            APP_LOG_ERROR("select timeout.\r\n");
+            log_error("select timeout.\r\n");
             return -1;
         }
         rc = ctx->backend->recv(ctx, msg + msg_length, length_to_read);
         if (rc == -1) {
-            APP_LOG_ERROR("read error.\r\n");
+            log_error("read error.\r\n");
             return -1;
         }
         /* Display the hex code of each character received */
        int i;
        for (i=0; i < rc; i++)
-       APP_LOG_DEBUG("<%.2X>\r\n", msg[msg_length + i]);
+       log_debug("<%.2X>\r\n", msg[msg_length + i]);
 
         /* Sums bytes received */
         msg_length += rc;
@@ -305,7 +306,7 @@ int _modbus_receive_msg(modbus_t *ctx, uint8_t *msg, msg_type_t msg_type)
                 length_to_read = compute_data_length_after_meta(
                     ctx, msg, msg_type);
                 if ((msg_length + length_to_read) > (int)ctx->backend->max_adu_length) {
-                    APP_LOG_ERROR("too many data.\r\n");
+                    log_error("too many data.\r\n");
                     return -1;
                 }
                 step = _STEP_DATA;
@@ -331,7 +332,7 @@ int _modbus_receive_msg(modbus_t *ctx, uint8_t *msg, msg_type_t msg_type)
 int modbus_receive(modbus_t *ctx, uint8_t *req)
 {
     if (ctx == NULL) {
-        APP_LOG_ERROR("ctx is null.\r\n");
+        log_error("ctx is null.\r\n");
         return -1;
     }
 
@@ -349,7 +350,7 @@ int modbus_receive(modbus_t *ctx, uint8_t *req)
 int modbus_receive_confirmation(modbus_t *ctx, uint8_t *rsp)
 {
     if (ctx == NULL) {
-        APP_LOG_ERROR("ctx is null.\r\n");
+        log_error("ctx is null.\r\n");
         return -1;
     }
 
@@ -381,13 +382,13 @@ static int check_confirmation(modbus_t *ctx, uint8_t *req,
 
             int exception_code = rsp[offset + 1];
             if (exception_code < MODBUS_EXCEPTION_MAX) {
-               APP_LOG_ERROR("func %d rsp valid exception code %d.\r\n",function-0x80,exception_code);
+               log_error("func %d rsp valid exception code %d.\r\n",function-0x80,exception_code);
             } else {
-               APP_LOG_ERROR("func %d rsp invalid exception code %d.\r\n",function-0x80,exception_code);
+               log_error("func %d rsp invalid exception code %d.\r\n",function-0x80,exception_code);
             }
             return -1;
         } else {
-         APP_LOG_ERROR("func %d rsp invalid .\r\n",function-0x80);
+         log_error("func %d rsp invalid .\r\n",function-0x80);
          return -1;
         }
     }
@@ -401,7 +402,7 @@ static int check_confirmation(modbus_t *ctx, uint8_t *req,
 
         /* Check function code */
         if (function != req[offset]) {
-            APP_LOG_DEBUG("Received function not corresponding to the request (0x%X != 0x%X).\r\n",
+            log_debug("Received function not corresponding to the request (0x%X != 0x%X).\r\n",
                           function, req[offset]);
             return -1;
         }
@@ -443,12 +444,12 @@ static int check_confirmation(modbus_t *ctx, uint8_t *req,
             rc = rsp_nb_value;
         } else {
 
-           APP_LOG_DEBUG("Quantity not corresponding to the request (%d != %d).\r\n",
+           log_debug("Quantity not corresponding to the request (%d != %d).\r\n",
                           rsp_nb_value, req_nb_value);
             rc = -1;
         }
     } else {
-      APP_LOG_DEBUG("Message length not corresponding to the computed length (%d != %d).\r\n",
+      log_debug("Message length not corresponding to the computed length (%d != %d).\r\n",
       rsp_length, rsp_length_computed);
       rc = -1;
     }
@@ -521,7 +522,7 @@ int modbus_reply(modbus_t *ctx, const uint8_t *req,
     sft_t sft;
 
     if (ctx == NULL) {
-        APP_LOG_ERROR("ctx is null.\r\n");
+        log_error("ctx is null.\r\n");
         return -1;
     }
 
@@ -551,13 +552,13 @@ int modbus_reply(modbus_t *ctx, const uint8_t *req,
         if (nb < 1 || MODBUS_MAX_READ_BITS < nb) {
             rsp_length = response_exception(
                 ctx, &sft, MODBUS_EXCEPTION_ILLEGAL_DATA_VALUE, rsp, TRUE);         
-               APP_LOG_DEBUG("Illegal nb of values %d in %s (max %d).\r\n",
+               log_debug("Illegal nb of values %d in %s (max %d).\r\n",
                 nb, name, MODBUS_MAX_READ_BITS);
         } else if (mapping_address < 0 || (mapping_address + nb) > nb_bits) {
             rsp_length = response_exception(
                 ctx, &sft,
                 MODBUS_EXCEPTION_ILLEGAL_DATA_ADDRESS, rsp, FALSE);
-                APP_LOG_DEBUG("Illegal data address 0x%0X in %s.\r\n",
+                log_debug("Illegal data address 0x%0X in %s.\r\n",
                 mapping_address < 0 ? address : address + nb, name);
         } else {
             rsp_length = ctx->backend->build_response_basis(&sft, rsp);
@@ -582,12 +583,12 @@ int modbus_reply(modbus_t *ctx, const uint8_t *req,
         if (nb < 1 || MODBUS_MAX_READ_REGISTERS < nb) {
             rsp_length = response_exception(
                 ctx, &sft, MODBUS_EXCEPTION_ILLEGAL_DATA_VALUE, rsp, TRUE);
-                APP_LOG_DEBUG("Illegal nb of values %d in %s (max %d).\r\n",
+                log_debug("Illegal nb of values %d in %s (max %d).\r\n",
                 nb, name, MODBUS_MAX_READ_REGISTERS);
         } else if (mapping_address < 0 || (mapping_address + nb) > nb_registers) {
             rsp_length = response_exception(
                 ctx, &sft, MODBUS_EXCEPTION_ILLEGAL_DATA_ADDRESS, rsp, FALSE);
-                APP_LOG_DEBUG("Illegal data address 0x%0X in %s.\r\n",
+                log_debug("Illegal data address 0x%0X in %s.\r\n",
                 mapping_address < 0 ? address : address + nb, name);
         } else {
             int i;
@@ -607,7 +608,7 @@ int modbus_reply(modbus_t *ctx, const uint8_t *req,
         if (mapping_address < 0 || mapping_address >= mb_mapping->nb_bits) {
             rsp_length = response_exception(
                 ctx, &sft, MODBUS_EXCEPTION_ILLEGAL_DATA_ADDRESS, rsp, FALSE);
-                APP_LOG_DEBUG("Illegal data address 0x%0X in write_bit.\r\n",address);
+                log_debug("Illegal data address 0x%0X in write_bit.\r\n",address);
         } else {
             int data = (req[offset + 3] << 8) + req[offset + 4];
 
@@ -619,7 +620,7 @@ int modbus_reply(modbus_t *ctx, const uint8_t *req,
                 rsp_length = response_exception(
                     ctx, &sft,
                     MODBUS_EXCEPTION_ILLEGAL_DATA_VALUE, rsp, FALSE);
-                    APP_LOG_DEBUG("Illegal data value 0x%0X in write_bit request at address %0X.\r\n",
+                    log_debug("Illegal data value 0x%0X in write_bit request at address %0X.\r\n",
                     data, address);
             }
         }
@@ -632,7 +633,7 @@ int modbus_reply(modbus_t *ctx, const uint8_t *req,
             rsp_length = response_exception(
                 ctx, &sft,
                 MODBUS_EXCEPTION_ILLEGAL_DATA_ADDRESS, rsp, FALSE);
-                APP_LOG_DEBUG("Illegal data address 0x%0X in write_register\n",
+                log_debug("Illegal data address 0x%0X in write_register\n",
                 address);
         } else {
             int data = (req[offset + 3] << 8) + req[offset + 4];
@@ -653,14 +654,14 @@ int modbus_reply(modbus_t *ctx, const uint8_t *req,
              * write) so it's necessary to flush. */
             rsp_length = response_exception(
                 ctx, &sft, MODBUS_EXCEPTION_ILLEGAL_DATA_VALUE, rsp, TRUE);
-                APP_LOG_DEBUG("Illegal number of values %d in write_bits (max %d).\r\n",
+                log_debug("Illegal number of values %d in write_bits (max %d).\r\n",
                 nb, MODBUS_MAX_WRITE_BITS);
         } else if (mapping_address < 0 ||
                    (mapping_address + nb) > mb_mapping->nb_bits) {
             rsp_length = response_exception(
                 ctx, &sft,
                 MODBUS_EXCEPTION_ILLEGAL_DATA_ADDRESS, rsp, FALSE);
-                APP_LOG_DEBUG("Illegal data address 0x%0X in write_bits.\r\n",
+                log_debug("Illegal data address 0x%0X in write_bits.\r\n",
                 mapping_address < 0 ? address : address + nb);
         } else {
             /* 6 = byte count */
@@ -681,13 +682,13 @@ int modbus_reply(modbus_t *ctx, const uint8_t *req,
         if (nb < 1 || MODBUS_MAX_WRITE_REGISTERS < nb) {
             rsp_length = response_exception(
                 ctx, &sft, MODBUS_EXCEPTION_ILLEGAL_DATA_VALUE, rsp, TRUE);
-                APP_LOG_DEBUG("Illegal number of values %d in write_registers (max %d).\r\n",
+                log_debug("Illegal number of values %d in write_registers (max %d).\r\n",
                 nb, MODBUS_MAX_WRITE_REGISTERS);
         } else if (mapping_address < 0 ||
                    (mapping_address + nb) > mb_mapping->nb_registers) {
             rsp_length = response_exception(
                 ctx, &sft, MODBUS_EXCEPTION_ILLEGAL_DATA_ADDRESS, rsp, FALSE);
-                APP_LOG_DEBUG("Illegal data address 0x%0X in write_registers.\r\n",
+                log_debug("Illegal data address 0x%0X in write_registers.\r\n",
                 mapping_address < 0 ? address : address + nb);
         } else {
             int i, j;
@@ -722,7 +723,7 @@ int modbus_reply(modbus_t *ctx, const uint8_t *req,
     }
         break;
     case MODBUS_FC_READ_EXCEPTION_STATUS:
-        APP_LOG_DEBUG("FIXME Not implemented.\r\n");      
+        log_debug("FIXME Not implemented.\r\n");      
         return -1;
         break;
     case MODBUS_FC_MASK_WRITE_REGISTER: {
@@ -731,7 +732,7 @@ int modbus_reply(modbus_t *ctx, const uint8_t *req,
         if (mapping_address < 0 || mapping_address >= mb_mapping->nb_registers) {
             rsp_length = response_exception(
                 ctx, &sft, MODBUS_EXCEPTION_ILLEGAL_DATA_ADDRESS, rsp, FALSE);
-                APP_LOG_DEBUG("Illegal data address 0x%0X in write_register.\r\n",
+                log_debug("Illegal data address 0x%0X in write_register.\r\n",
                 address);
         } else {
             uint16_t data = mb_mapping->tab_registers[mapping_address];
@@ -758,7 +759,7 @@ int modbus_reply(modbus_t *ctx, const uint8_t *req,
             nb_write_bytes != nb_write * 2) {
             rsp_length = response_exception(
                 ctx, &sft, MODBUS_EXCEPTION_ILLEGAL_DATA_VALUE, rsp, TRUE);
-                APP_LOG_DEBUG("Illegal nb of values (W%d, R%d) in write_and_read_registers (max W%d, R%d).\r\n",
+                log_debug("Illegal nb of values (W%d, R%d) in write_and_read_registers (max W%d, R%d).\r\n",
                 nb_write, nb, MODBUS_MAX_WR_WRITE_REGISTERS, MODBUS_MAX_WR_READ_REGISTERS);
         } else if (mapping_address < 0 ||
                    (mapping_address + nb) > mb_mapping->nb_registers ||
@@ -766,7 +767,7 @@ int modbus_reply(modbus_t *ctx, const uint8_t *req,
                    (mapping_address_write + nb_write) > mb_mapping->nb_registers) {
             rsp_length = response_exception(
                 ctx, &sft, MODBUS_EXCEPTION_ILLEGAL_DATA_ADDRESS, rsp, FALSE);
-                APP_LOG_DEBUG("Illegal data read address 0x%0X or write address 0x%0X write_and_read_registers.\r\n",
+                log_debug("Illegal data read address 0x%0X or write address 0x%0X write_and_read_registers.\r\n",
                 mapping_address < 0 ? address : address + nb,
                 mapping_address_write < 0 ? address_write : address_write + nb_write);
         } else {
@@ -794,7 +795,7 @@ int modbus_reply(modbus_t *ctx, const uint8_t *req,
     default:
         rsp_length = response_exception(
             ctx, &sft, MODBUS_EXCEPTION_ILLEGAL_FUNCTION, rsp, TRUE);
-            APP_LOG_DEBUG("Unknown Modbus function code: 0x%0X.\r\n", function);
+            log_debug("Unknown Modbus function code: 0x%0X.\r\n", function);
         break;
     }
 
@@ -815,7 +816,7 @@ int modbus_reply_exception(modbus_t *ctx, const uint8_t *req,
     sft_t sft;
 
     if (ctx == NULL) {
-        APP_LOG_ERROR("ctx is null.\r\n");
+        log_error("ctx is null.\r\n");
         return -1;
     }
 
@@ -888,12 +889,12 @@ int modbus_read_bits(modbus_t *ctx, int addr, int nb, uint8_t *dest)
     int rc;
 
     if (ctx == NULL) {
-        APP_LOG_ERROR("ctx is null.\r\n");
+        log_error("ctx is null.\r\n");
         return -1;
     }
 
     if (nb > MODBUS_MAX_READ_BITS) {
-     APP_LOG_DEBUG("ERROR Too many bits requested (%d > %d).\r\n", nb, MODBUS_MAX_READ_BITS);
+     log_debug("ERROR Too many bits requested (%d > %d).\r\n", nb, MODBUS_MAX_READ_BITS);
      return -1;
     }
 
@@ -912,12 +913,12 @@ int modbus_read_input_bits(modbus_t *ctx, int addr, int nb, uint8_t *dest)
     int rc;
 
     if (ctx == NULL) {
-        APP_LOG_ERROR("ctx is null.\r\n");
+        log_error("ctx is null.\r\n");
         return -1;
     }
 
     if (nb > MODBUS_MAX_READ_BITS) {
-     APP_LOG_DEBUG("ERROR Too many discrete inputs requested (%d > %d).\r\n", nb, MODBUS_MAX_READ_BITS);
+     log_debug("ERROR Too many discrete inputs requested (%d > %d).\r\n", nb, MODBUS_MAX_READ_BITS);
      return -1;
     }
 
@@ -939,7 +940,7 @@ static int read_registers(modbus_t *ctx, int function, int addr, int nb,
     uint8_t rsp[MAX_MESSAGE_LENGTH];
 
     if (nb > MODBUS_MAX_READ_REGISTERS) {
-      APP_LOG_DEBUG("ERROR Too many registers requested (%d > %d).\r\n", nb, MODBUS_MAX_READ_REGISTERS);       
+      log_debug("ERROR Too many registers requested (%d > %d).\r\n", nb, MODBUS_MAX_READ_REGISTERS);       
       return -1;
     }
 
@@ -977,12 +978,12 @@ int modbus_read_registers(modbus_t *ctx, int addr, int nb, uint16_t *dest)
     int status;
 
     if (ctx == NULL) {
-        APP_LOG_ERROR("ctx is null.\r\n");
+        log_error("ctx is null.\r\n");
         return -1;
     }
 
     if (nb > MODBUS_MAX_READ_REGISTERS) {
-     APP_LOG_DEBUG("ERROR Too many registers requested (%d > %d).\r\n",nb, MODBUS_MAX_READ_REGISTERS);
+     log_debug("ERROR Too many registers requested (%d > %d).\r\n",nb, MODBUS_MAX_READ_REGISTERS);
      return -1;
     }
 
@@ -998,12 +999,12 @@ int modbus_read_input_registers(modbus_t *ctx, int addr, int nb,
     int status;
 
     if (ctx == NULL) {
-        APP_LOG_ERROR("ctx is null.\r\n");
+        log_error("ctx is null.\r\n");
         return -1;
     }
 
     if (nb > MODBUS_MAX_READ_REGISTERS) {
-        APP_LOG_DEBUG("ERROR Too many input registers requested (%d > %d).\r\n", nb, MODBUS_MAX_READ_REGISTERS);
+        log_debug("ERROR Too many input registers requested (%d > %d).\r\n", nb, MODBUS_MAX_READ_REGISTERS);
         return -1;
     }
 
@@ -1022,7 +1023,7 @@ static int write_single(modbus_t *ctx, int function, int addr, int value)
     uint8_t req[_MIN_REQ_LENGTH];
 
     if (ctx == NULL) {
-        APP_LOG_ERROR("ctx is null.\r\n");
+        log_error("ctx is null.\r\n");
         return -1;
     }
 
@@ -1047,7 +1048,7 @@ static int write_single(modbus_t *ctx, int function, int addr, int value)
 int modbus_write_bit(modbus_t *ctx, int addr, int status)
 {
     if (ctx == NULL) {
-        APP_LOG_ERROR("ctx is null.\r\n");
+        log_error("ctx is null.\r\n");
         return -1;
     }
 
@@ -1059,7 +1060,7 @@ int modbus_write_bit(modbus_t *ctx, int addr, int status)
 int modbus_write_register(modbus_t *ctx, int addr, int value)
 {
     if (ctx == NULL) {
-        APP_LOG_ERROR("ctx is null..\r\n");
+        log_error("ctx is null..\r\n");
         return -1;
     }
 
@@ -1078,12 +1079,12 @@ int modbus_write_bits(modbus_t *ctx, int addr, int nb, const uint8_t *src)
     uint8_t req[MAX_MESSAGE_LENGTH];
 
     if (ctx == NULL) {
-        APP_LOG_ERROR("ctx is null..\r\n");
+        log_error("ctx is null..\r\n");
         return -1;
     }
 
     if (nb > MODBUS_MAX_WRITE_BITS) {
-        APP_LOG_DEBUG("ERROR Writing too many bits (%d > %d).\r\n",nb, MODBUS_MAX_WRITE_BITS);
+        log_debug("ERROR Writing too many bits (%d > %d).\r\n",nb, MODBUS_MAX_WRITE_BITS);
         return -1;
     }
 
@@ -1135,12 +1136,12 @@ int modbus_write_registers(modbus_t *ctx, int addr, int nb, const uint16_t *src)
     uint8_t req[MAX_MESSAGE_LENGTH];
 
     if (ctx == NULL) {
-        APP_LOG_ERROR("ctx is null.\r\n");
+        log_error("ctx is null.\r\n");
         return -1;
     }
 
     if (nb > MODBUS_MAX_WRITE_REGISTERS) {
-        APP_LOG_ERROR("ERROR Trying to write to too many registers (%d > %d).\r\n",nb, MODBUS_MAX_WRITE_REGISTERS);
+        log_error("ERROR Trying to write to too many registers (%d > %d).\r\n",nb, MODBUS_MAX_WRITE_REGISTERS);
         return -1;
     }
 
@@ -1222,17 +1223,17 @@ int modbus_write_and_read_registers(modbus_t *ctx,
     uint8_t rsp[MAX_MESSAGE_LENGTH];
 
     if (ctx == NULL) {
-        APP_LOG_ERROR("ctx is null.\r\n");
+        log_error("ctx is null.\r\n");
         return -1;
     }
 
     if (write_nb > MODBUS_MAX_WR_WRITE_REGISTERS) {
-        APP_LOG_ERROR("ERROR Too many registers to write (%d > %d).\r\n",write_nb, MODBUS_MAX_WR_WRITE_REGISTERS);
+        log_error("ERROR Too many registers to write (%d > %d).\r\n",write_nb, MODBUS_MAX_WR_WRITE_REGISTERS);
         return -1;
     }
 
     if (read_nb > MODBUS_MAX_WR_READ_REGISTERS) {
-        APP_LOG_ERROR("ERROR Too many registers requested (%d > %d).\r\n",read_nb, MODBUS_MAX_WR_READ_REGISTERS);
+        log_error("ERROR Too many registers requested (%d > %d).\r\n",read_nb, MODBUS_MAX_WR_READ_REGISTERS);
         return -1;
     }
     req_length = ctx->backend->build_request_basis(ctx,
@@ -1283,7 +1284,7 @@ int modbus_report_slave_id(modbus_t *ctx, int max_dest, uint8_t *dest)
     uint8_t req[_MIN_REQ_LENGTH];
 
     if (ctx == NULL || max_dest <= 0) {
-        APP_LOG_ERROR("ctx is null or max_dest <=0..\r\n");
+        log_error("ctx is null or max_dest <=0..\r\n");
         return -1;
     }
 
@@ -1335,7 +1336,7 @@ void _modbus_init_common(modbus_t *ctx)
 int modbus_set_slave(modbus_t *ctx, int slave)
 {
     if (ctx == NULL) {
-        APP_LOG_ERROR("ctx is null..\r\n");
+        log_error("ctx is null..\r\n");
         return -1;
     }
 
@@ -1345,7 +1346,7 @@ int modbus_set_slave(modbus_t *ctx, int slave)
 int modbus_get_slave(modbus_t *ctx)
 {
     if (ctx == NULL) {
-        APP_LOG_ERROR("ctx is null..\r\n");
+        log_error("ctx is null..\r\n");
         return -1;
     }
 
@@ -1357,7 +1358,7 @@ int modbus_get_slave(modbus_t *ctx)
 int modbus_get_response_timeout(modbus_t *ctx, uint32_t *timeout)
 {
     if (ctx == NULL || timeout == NULL) {
-        APP_LOG_ERROR("ctx is null..\r\n");
+        log_error("ctx is null..\r\n");
         return -1;
     }
 
@@ -1369,7 +1370,7 @@ int modbus_set_response_timeout(modbus_t *ctx, uint32_t timeout)
 {
     if (ctx == NULL ||
         timeout == 0) {
-        APP_LOG_ERROR("ctx is null or timeout == 0..\r\n");
+        log_error("ctx is null or timeout == 0..\r\n");
         return -1;
     }
 
@@ -1381,7 +1382,7 @@ int modbus_set_response_timeout(modbus_t *ctx, uint32_t timeout)
 int modbus_get_byte_timeout(modbus_t *ctx, uint32_t *timeout)
 {
     if (ctx == NULL || timeout == NULL) {
-        APP_LOG_ERROR("ctx or timeout is null.\r\n");
+        log_error("ctx or timeout is null.\r\n");
         return -1;
     }
 
@@ -1393,7 +1394,7 @@ int modbus_set_byte_timeout(modbus_t *ctx, uint32_t timeout)
 {
     /* Byte timeout can be disabled when both values are zero */
     if (ctx == NULL || timeout == 0) {
-        APP_LOG_ERROR("ctx is null or timeout == 0.\r\n");
+        log_error("ctx is null or timeout == 0.\r\n");
         return -1;
     }
 
@@ -1405,7 +1406,7 @@ int modbus_set_byte_timeout(modbus_t *ctx, uint32_t timeout)
 int modbus_get_indication_timeout(modbus_t *ctx, uint32_t *timeout)
 {
     if (ctx == NULL || timeout == NULL) {
-        APP_LOG_ERROR("ctx or timeout is null.\r\n");
+        log_error("ctx or timeout is null.\r\n");
         return -1;
     }
 
@@ -1417,7 +1418,7 @@ int modbus_set_indication_timeout(modbus_t *ctx, uint32_t timeout)
 {
     /* Indication timeout can be disabled when both values are zero */
     if (ctx == NULL ) {
-        APP_LOG_ERROR("ctx is null or timeout == 0.\r\n");
+        log_error("ctx is null or timeout == 0.\r\n");
         return -1;
     }
 
@@ -1428,7 +1429,7 @@ int modbus_set_indication_timeout(modbus_t *ctx, uint32_t timeout)
 int modbus_get_header_length(modbus_t *ctx)
 {
     if (ctx == NULL) {
-        APP_LOG_ERROR("ctx is null.\r\n");
+        log_error("ctx is null.\r\n");
         return -1;
     }
 
@@ -1438,7 +1439,7 @@ int modbus_get_header_length(modbus_t *ctx)
 int modbus_connect(modbus_t *ctx)
 {
     if (ctx == NULL) {
-        APP_LOG_ERROR("ctx is null.\r\n");
+        log_error("ctx is null.\r\n");
         return -1;
     }
 
@@ -1448,7 +1449,7 @@ int modbus_connect(modbus_t *ctx)
 int modbus_close(modbus_t *ctx)
 {
   if (ctx == NULL){
-     APP_LOG_ERROR("ctx is null.\r\n");
+     log_error("ctx is null.\r\n");
      return -1;
   }
   return  ctx->backend->close(ctx);
@@ -1573,6 +1574,51 @@ void modbus_mapping_free(modbus_mapping_t *mb_mapping)
     port_modbus_free(mb_mapping);
 }
 
+/* Sets many bits from a single byte value (all 8 bits of the byte value are
+   set) */
+void modbus_set_bits_from_byte(uint8_t *dest, int idx, const uint8_t value)
+{
+    int i;
+
+    for (i=0; i < 8; i++) {
+        dest[idx+i] = (value & (1 << i)) ? 1 : 0;
+    }
+}
+
+/* Sets many bits from a table of bytes (only the bits between idx and
+   idx + nb_bits are set) */
+void modbus_set_bits_from_bytes(uint8_t *dest, int idx, unsigned int nb_bits,
+                                const uint8_t *tab_byte)
+{
+    unsigned int i;
+    int shift = 0;
+
+    for (i = idx; i < idx + nb_bits; i++) {
+        dest[i] = tab_byte[(i - idx) / 8] & (1 << shift) ? 1 : 0;
+        /* gcc doesn't like: shift = (++shift) % 8; */
+        shift++;
+        shift %= 8;
+    }
+}
+
+/* Gets the byte value from many bits.
+   To obtain a full byte, set nb_bits to 8. */
+uint8_t modbus_get_byte_from_bits(const uint8_t *src, int idx,
+                                  unsigned int nb_bits)
+{
+    unsigned int i;
+    uint8_t value = 0;
+
+    if (nb_bits > 8) {
+        nb_bits = 8;
+    }
+
+    for (i=0; i < nb_bits; i++) {
+        value |= (src[idx+i] << i);
+    }
+
+    return value;
+}
 
 /*
  * Function strlcpy was originally developed by

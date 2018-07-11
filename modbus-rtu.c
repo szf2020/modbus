@@ -6,10 +6,10 @@
 #include "modbus-private.h"
 #include "modbus-rtu.h"
 #include "modbus-rtu-private.h"
-   
-#define APP_LOG_MODULE_NAME   "[modbus-rtu]"
-#define APP_LOG_MODULE_LEVEL   APP_LOG_LEVEL_DEBUG    
-#include "app_log.h"
+#include "log.h"
+#define LOG_MODULE_NAME   "[modbus-rtu]"
+#define LOG_MODULE_LEVEL   LOG_LEVEL_DEBUG    
+
    
 /* Table of CRC values for high-order byte */
 static const uint8_t table_crc_hi[] = {
@@ -79,7 +79,7 @@ static int _modbus_set_slave(modbus_t *ctx, int slave)
     if (slave >= 0 && slave <= 247) {
         ctx->slave = slave;
     } else {
-      APP_LOG_ERROR("slave id invalid!.\n");
+      log_error("slave id invalid!.\n");
       return -1;
     }
     return 0;
@@ -179,7 +179,7 @@ static int _modbus_rtu_receive(modbus_t *ctx, uint8_t *req)
         /* Ignore errors and reset the flag */
         ctx_rtu->confirmation_to_ignore = FALSE;
         rc = 0;
-        APP_LOG_DEBUG("Confirmation to ignore\r\n");
+        log_debug("Confirmation to ignore\r\n");
     } else {
         rc = _modbus_receive_msg(ctx, req, MSG_INDICATION);
         if (rc == 0) {
@@ -203,7 +203,7 @@ static int _modbus_rtu_pre_check_confirmation(modbus_t *ctx, const uint8_t *req,
     /* Check responding slave is the slave we requested (except for broacast
      * request) */
     if (req[0] != rsp[0] && req[0] != MODBUS_BROADCAST_ADDRESS) {
-      APP_LOG_DEBUG( "The responding slave %d isn't the requested slave %d\r\n",rsp[0], req[0]);
+      log_debug( "The responding slave %d isn't the requested slave %d\r\n",rsp[0], req[0]);
       return -1;
     } else {
       return 0;
@@ -223,7 +223,7 @@ static int _modbus_rtu_check_integrity(modbus_t *ctx, uint8_t *msg,
     /* Filter on the Modbus unit identifier (slave) in RTU mode to avoid useless
      * CRC computing. */
     if (slave != ctx->slave && slave != MODBUS_BROADCAST_ADDRESS) {
-        APP_LOG_DEBUG("Request for slave %d ignored (not %d)\r\n", slave, ctx->slave);
+        log_debug("Request for slave %d ignored (not %d)\r\n", slave, ctx->slave);
         /* Following call to check_confirmation handles this error */
         return 0;
     }
@@ -235,7 +235,7 @@ static int _modbus_rtu_check_integrity(modbus_t *ctx, uint8_t *msg,
     if (crc_calculated == crc_received) {
         return msg_length;
     } else {
-      APP_LOG_DEBUG("ERROR CRC received 0x%0X != CRC calculated 0x%0X\r\n",crc_received, crc_calculated);     
+      log_debug("ERROR CRC received 0x%0X != CRC calculated 0x%0X\r\n",crc_received, crc_calculated);     
       return -1;
     }
 }
@@ -246,7 +246,7 @@ static int _modbus_rtu_connect(modbus_t *ctx)
     int status;
     modbus_rtu_t *ctx_rtu = ctx->backend_data;
 
-     APP_LOG_DEBUG("Opening serial%d at %d port %d  %d,none, %d)\r\n",
+     log_debug("Opening serial%d at %d port %d  %d,none, %d)\r\n",
                         ctx_rtu->port, ctx_rtu->port,ctx_rtu->baud,
                         ctx_rtu->data_bit, ctx_rtu->stop_bit);
     status = serial_open(ctx->s,ctx_rtu->port,ctx_rtu->baud,ctx_rtu->data_bit,ctx_rtu->stop_bit);
@@ -256,7 +256,7 @@ static int _modbus_rtu_connect(modbus_t *ctx)
 int modbus_rtu_set_serial_mode(modbus_t *ctx, int mode)
 {
     if (ctx == NULL) {
-        APP_LOG_ERROR("ctx is null.\r\n");
+        log_error("ctx is null.\r\n");
         return -1;
     }
 
@@ -271,7 +271,7 @@ int modbus_rtu_set_serial_mode(modbus_t *ctx, int mode)
             return 0;
         }
     }else {
-    APP_LOG_DEBUG("This function isn't supported on your platform\r\n");
+    log_debug("This function isn't supported on your platform\r\n");
     return -1;
     }
 
@@ -282,14 +282,14 @@ int modbus_rtu_set_serial_mode(modbus_t *ctx, int mode)
 int modbus_rtu_get_serial_mode(modbus_t *ctx)
 {
     if (ctx == NULL) {
-        APP_LOG_ERROR("ctx is null.\r\n");
+        log_error("ctx is null.\r\n");
         return -1;
     }
    if (ctx->backend->backend_type == _MODBUS_BACKEND_TYPE_RTU){
       modbus_rtu_t *ctx_rtu = ctx->backend_data;
      return ctx_rtu->serial_mode;
     } 
-    APP_LOG_DEBUG("This function isn't supported on your platform\r\n");
+    log_debug("This function isn't supported on your platform\r\n");
     return -1;
 }
 
@@ -299,7 +299,7 @@ static int _modbus_rtu_close(modbus_t *ctx)
     /* Restore line settings and close file descriptor in RTU mode */
     modbus_rtu_t *ctx_rtu = ctx->backend_data;
     if(ctx_rtu == NULL){
-      APP_LOG_ERROR("ctx_rtu is null.\r\n");
+      log_error("ctx_rtu is null.\r\n");
       return -1;
     }
     if (ctx->s != -1) {
@@ -319,7 +319,7 @@ static int _modbus_rtu_flush(modbus_t *ctx)
  return serial_flush(ctx->s);
 }
 
-static int _modbus_rtu_select(modbus_t *ctx, int timeout)
+static int _modbus_rtu_select(modbus_t *ctx, uint32_t timeout)
 {
     int s_rc;
     s_rc = serial_select(ctx->s,timeout);
@@ -370,7 +370,7 @@ modbus_t* modbus_new_rtu(uint8_t port,
     int rc;
     /* Check baud argument */
     if (baud == 0) {
-        APP_LOG_ERROR("The baud rate value must not be zero\r\n");
+        log_error("The baud rate value must not be zero\r\n");
         return NULL;
     }
 
@@ -399,17 +399,17 @@ modbus_t* modbus_new_rtu(uint8_t port,
     /*创建设备实体失败*/
     if(rc ==-1){
     modbus_free(ctx);
-    APP_LOG_ERROR("创建设备失败！\r\n");
+    log_error("创建设备失败！\r\n");
     return NULL;
     }
     /*注册设备驱动失败*/
     rc = serial_register_hal_driver(ctx->s,hal);
     if(rc ==-1) {
-    APP_LOG_ERROR("注册设备驱动失败！\r\n");
+    log_error("注册设备驱动失败！\r\n");
     serial_device_destroy(ctx->s);
-    APP_LOG_ERROR("销毁serial device.\r\n");
+    log_error("销毁serial device.\r\n");
     modbus_free(ctx);
-    APP_LOG_ERROR("ctx and ctx->backend_data struct.\r\n");
+    log_error("ctx and ctx->backend_data struct.\r\n");
     return NULL;
     }
     return ctx;

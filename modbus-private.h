@@ -87,7 +87,7 @@ typedef struct _modbus_backend {
     int (*connect) (modbus_t *ctx);
     int (*close) (modbus_t *ctx);
     int (*flush) (modbus_t *ctx);
-    int (*select) (modbus_t *ctx,int msg_length);
+    int (*select) (modbus_t *ctx,uint32_t timeout);
     void (*free) (modbus_t *ctx);
 } modbus_backend_t;
 
@@ -96,9 +96,9 @@ struct _modbus {
     int slave;
     /* Socket or file descriptor */
     int s;
-    int response_timeout;
-    int byte_timeout;
-    int indication_timeout;
+    uint16_t response_timeout;
+    uint8_t  byte_timeout;
+    uint32_t indication_timeout;
     const modbus_backend_t *backend;
     void *backend_data;
 };
