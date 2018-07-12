@@ -2,7 +2,7 @@
 #define MODBUS_RTU_H
 
 #include "modbus.h"
-#include "serial_device.h"
+#include "serial.h"
 
 MODBUS_BEGIN_DECLS
 
