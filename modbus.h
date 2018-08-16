@@ -36,6 +36,10 @@ MODBUS_BEGIN_DECLS
 #define ON 1
 #endif
 
+
+#define MODBUS_MALLOC(X)                    pvPortMalloc((X))
+#define MODBUS_FREE(X)                      vPortFree((X))
+
 /* Modbus function codes */
 #define MODBUS_FC_READ_COILS                0x01
 #define MODBUS_FC_READ_DISCRETE_INPUTS      0x02

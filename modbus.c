@@ -8,7 +8,7 @@
  */
 #include "string.h"
 #include "modbus.h"
-
+#include "cmsis_os.h"
 #include "log.h"
 #define LOG_MODULE_NAME   "[modbus]"
 #define LOG_MODULE_LEVEL   LOG_LEVEL_DEBUG  
@@ -284,7 +284,7 @@ int _modbus_receive_msg(modbus_t *ctx, uint8_t *msg, msg_type_t msg_type)
         /* Display the hex code of each character received */
        int i;
        for (i=0; i < rc; i++)
-       log_debug("<%.2X>\r\n", msg[msg_length + i]);
+       log_debug("<%2X>\r\n", msg[msg_length + i]);
 
         /* Sums bytes received */
         msg_length += rc;
@@ -1477,7 +1477,7 @@ modbus_mapping_t* modbus_mapping_new_start_address(
 {
     modbus_mapping_t *mb_mapping;
 
-    mb_mapping = (modbus_mapping_t *)port_modbus_malloc(sizeof(modbus_mapping_t));
+    mb_mapping = (modbus_mapping_t *)MODBUS_MALLOC(sizeof(modbus_mapping_t));
     if (mb_mapping == NULL) {
         return NULL;
     }
@@ -1490,9 +1490,9 @@ modbus_mapping_t* modbus_mapping_new_start_address(
     } else {
         /* Negative number raises a POSIX error */
         mb_mapping->tab_bits =
-            (uint8_t *) port_modbus_malloc(nb_bits * sizeof(uint8_t));
+            (uint8_t *) MODBUS_MALLOC(nb_bits * sizeof(uint8_t));
         if (mb_mapping->tab_bits == NULL) {
-            port_modbus_free(mb_mapping);
+            MODBUS_FREE(mb_mapping);
             return NULL;
         }
         memset(mb_mapping->tab_bits, 0, nb_bits * sizeof(uint8_t));
@@ -1505,10 +1505,10 @@ modbus_mapping_t* modbus_mapping_new_start_address(
         mb_mapping->tab_input_bits = NULL;
     } else {
         mb_mapping->tab_input_bits =
-            (uint8_t *) port_modbus_malloc(nb_input_bits * sizeof(uint8_t));
+            (uint8_t *) MODBUS_MALLOC(nb_input_bits * sizeof(uint8_t));
         if (mb_mapping->tab_input_bits == NULL) {
-            port_modbus_free(mb_mapping->tab_bits);
-            port_modbus_free(mb_mapping);
+            MODBUS_FREE(mb_mapping->tab_bits);
+            MODBUS_FREE(mb_mapping);
             return NULL;
         }
         memset(mb_mapping->tab_input_bits, 0, nb_input_bits * sizeof(uint8_t));
@@ -1521,11 +1521,11 @@ modbus_mapping_t* modbus_mapping_new_start_address(
         mb_mapping->tab_registers = NULL;
     } else {
         mb_mapping->tab_registers =
-            (uint16_t *) port_modbus_malloc(nb_registers * sizeof(uint16_t));
+            (uint16_t *) MODBUS_MALLOC(nb_registers * sizeof(uint16_t));
         if (mb_mapping->tab_registers == NULL) {
-            port_modbus_free(mb_mapping->tab_input_bits);
-            port_modbus_free(mb_mapping->tab_bits);
-            port_modbus_free(mb_mapping);
+            MODBUS_FREE(mb_mapping->tab_input_bits);
+            MODBUS_FREE(mb_mapping->tab_bits);
+            MODBUS_FREE(mb_mapping);
             return NULL;
         }
         memset(mb_mapping->tab_registers, 0, nb_registers * sizeof(uint16_t));
@@ -1538,12 +1538,12 @@ modbus_mapping_t* modbus_mapping_new_start_address(
         mb_mapping->tab_input_registers = NULL;
     } else {
         mb_mapping->tab_input_registers =
-            (uint16_t *) port_modbus_malloc(nb_input_registers * sizeof(uint16_t));
+            (uint16_t *) MODBUS_MALLOC(nb_input_registers * sizeof(uint16_t));
         if (mb_mapping->tab_input_registers == NULL) {
-            port_modbus_free(mb_mapping->tab_registers);
-            port_modbus_free(mb_mapping->tab_input_bits);
-            port_modbus_free(mb_mapping->tab_bits);
-            port_modbus_free(mb_mapping);
+            MODBUS_FREE(mb_mapping->tab_registers);
+            MODBUS_FREE(mb_mapping->tab_input_bits);
+            MODBUS_FREE(mb_mapping->tab_bits);
+            MODBUS_FREE(mb_mapping);
             return NULL;
         }
         memset(mb_mapping->tab_input_registers, 0,
@@ -1567,11 +1567,11 @@ void modbus_mapping_free(modbus_mapping_t *mb_mapping)
         return;
     }
 
-    port_modbus_free(mb_mapping->tab_input_registers);
-    port_modbus_free(mb_mapping->tab_registers);
-    port_modbus_free(mb_mapping->tab_input_bits);
-    port_modbus_free(mb_mapping->tab_bits);
-    port_modbus_free(mb_mapping);
+    MODBUS_FREE(mb_mapping->tab_input_registers);
+    MODBUS_FREE(mb_mapping->tab_registers);
+    MODBUS_FREE(mb_mapping->tab_input_bits);
+    MODBUS_FREE(mb_mapping->tab_bits);
+    MODBUS_FREE(mb_mapping);
 }
 
 /* Sets many bits from a single byte value (all 8 bits of the byte value are

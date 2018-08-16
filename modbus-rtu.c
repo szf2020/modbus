@@ -6,6 +6,7 @@
 #include "modbus-private.h"
 #include "modbus-rtu.h"
 #include "modbus-rtu-private.h"
+#include "cmsis_os.h"
 #include "log.h"
 #define LOG_MODULE_NAME   "[modbus-rtu]"
 #define LOG_MODULE_LEVEL   LOG_LEVEL_DEBUG    
@@ -332,9 +333,9 @@ static int _modbus_rtu_select(modbus_t *ctx, uint32_t timeout)
 
 static void _modbus_rtu_free(modbus_t *ctx) {
     if (ctx->backend_data) {
-        port_modbus_free(ctx->backend_data);
+        MODBUS_FREE(ctx->backend_data);
     }
-    port_modbus_free(ctx);
+    MODBUS_FREE(ctx);
 }
 
 const modbus_backend_t _modbus_rtu_backend = {
@@ -374,14 +375,14 @@ modbus_t* modbus_new_rtu(uint8_t port,
         return NULL;
     }
 
-    ctx = (modbus_t *)port_modbus_malloc(sizeof(modbus_t));
+    ctx = (modbus_t *)MODBUS_MALLOC(sizeof(modbus_t));
     if (ctx == NULL) {
         return NULL;
     }
 
     _modbus_init_common(ctx);
     ctx->backend = &_modbus_rtu_backend;
-    ctx->backend_data = (modbus_rtu_t *)port_modbus_malloc(sizeof(modbus_rtu_t));
+    ctx->backend_data = (modbus_rtu_t *)MODBUS_MALLOC(sizeof(modbus_rtu_t));
     if (ctx->backend_data == NULL) {
         modbus_free(ctx);
         return NULL;
@@ -395,7 +396,7 @@ modbus_t* modbus_new_rtu(uint8_t port,
     /* The RS232 mode has been set by default */
     ctx_rtu->serial_mode = MODBUS_RTU_RS232;
     ctx_rtu->confirmation_to_ignore = FALSE;
-    rc= serial_device_create(&ctx->s);
+    rc= serial_create(&ctx->s,MODBUS_RTU_RX_BUFFER_SIZE,MODBUS_RTU_TX_BUFFER_SIZE);
     /*创建设备实体失败*/
     if(rc ==-1){
     modbus_free(ctx);
@@ -406,7 +407,7 @@ modbus_t* modbus_new_rtu(uint8_t port,
     rc = serial_register_hal_driver(ctx->s,hal);
     if(rc ==-1) {
     log_error("注册设备驱动失败！\r\n");
-    serial_device_destroy(ctx->s);
+    serial_destroy(ctx->s);
     log_error("销毁serial device.\r\n");
     modbus_free(ctx);
     log_error("ctx and ctx->backend_data struct.\r\n");
