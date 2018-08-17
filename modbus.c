@@ -95,7 +95,7 @@ static int send_msg(modbus_t *ctx, uint8_t *msg, int msg_length)
     msg_length = ctx->backend->send_msg_pre(msg, msg_length);
  
     for (i = 0; i < msg_length; i++)
-    log_debug("[%2X]\r\n", msg[i]);
+    log_array("[%2X]\r\n", msg[i]);
 
     rc = ctx->backend->send(ctx, msg, msg_length);
     if (rc == -1) {
@@ -284,7 +284,7 @@ int _modbus_receive_msg(modbus_t *ctx, uint8_t *msg, msg_type_t msg_type)
         /* Display the hex code of each character received */
        int i;
        for (i=0; i < rc; i++)
-       log_debug("<%2X>\r\n", msg[msg_length + i]);
+       log_array("<%2X>\r\n", msg[msg_length + i]);
 
         /* Sums bytes received */
         msg_length += rc;

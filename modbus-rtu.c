@@ -147,21 +147,12 @@ static int _modbus_rtu_send_msg_pre(uint8_t *req, int req_length)
 
 static ssize_t _modbus_rtu_send(modbus_t *ctx, const uint8_t *req, int req_length)
 {
-
-
 ssize_t len;
-
 /*对于半双工的工作模式 必须等待发送完毕才可以接收*/
-#if  RS485_HALF_DUPLEX >0
-
-#define  MODBUS_RTU_SEND_TIMEOUT    20
-
-void modbus_rtu_send_pre();
-void modbus_rtu_send_after();
-
+#if  MODBUS_RTU_RS485_HALF_DUPLEX > 0
 modbus_rtu_send_pre();
 len = serial_write(ctx->s, req, req_length);
-len -= serial_wait_complete(ctx->s,MODBUS_RTU_SEND_TIMEOUT);
+len -= serial_complete(ctx->s,MODBUS_RTU_SEND_TIMEOUT);
 modbus_rtu_send_after();
 #else
 len = serial_write(ctx->s, req, req_length);
@@ -414,4 +405,14 @@ modbus_t* modbus_new_rtu(uint8_t port,
     return NULL;
     }
     return ctx;
+}
+
+__weak void modbus_rtu_send_pre(void)
+{
+  
+}
+
+__weak void modbus_rtu_send_after(void)
+{
+  
 }

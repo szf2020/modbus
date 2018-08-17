@@ -13,9 +13,13 @@ MODBUS_API modbus_t* modbus_new_rtu(uint8_t port, uint32_t baud,
 #define MODBUS_RTU_RS232                        0
 #define MODBUS_RTU_RS485                        1
 
-#define MODBUS_RTU_RS485_HALF_DUPLEX            0
+#define MODBUS_RTU_RS485_HALF_DUPLEX            1
 #define MODBUS_RTU_SEND_TIMEOUT                 5
 
+#if MODBUS_RTU_RS485_HALF_DUPLEX > 0
+void modbus_rtu_send_pre();
+void modbus_rtu_send_after();
+#endif
 
 /* Modbus_Application_Protocol_V1_1b.pdf Chapter 4 Section 1 Page 5
  * RS232 / RS485 ADU = 253 bytes + slave (1 byte) + CRC (2 bytes) = 256 bytes
