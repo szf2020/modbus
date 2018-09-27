@@ -24,9 +24,9 @@ void modbus_rtu_send_after();
 /* Modbus_Application_Protocol_V1_1b.pdf Chapter 4 Section 1 Page 5
  * RS232 / RS485 ADU = 253 bytes + slave (1 byte) + CRC (2 bytes) = 256 bytes
  */
-#define MODBUS_RTU_MAX_ADU_LENGTH               256
-#define MODBUS_RTU_RX_BUFFER_SIZE               256
-#define MODBUS_RTU_TX_BUFFER_SIZE               256
+#define MODBUS_RTU_MAX_ADU_LENGTH               48
+#define MODBUS_RTU_RX_BUFFER_SIZE               64
+#define MODBUS_RTU_TX_BUFFER_SIZE               64
 
 MODBUS_API int modbus_rtu_set_serial_mode(modbus_t *ctx, int mode);
 MODBUS_API int modbus_rtu_get_serial_mode(modbus_t *ctx);
